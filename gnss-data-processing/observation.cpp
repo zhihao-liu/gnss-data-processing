@@ -66,8 +66,8 @@ ObservationData::ObservationData(string filePath)
         _observationRecords.push_back(record);
 
         // Reduce the number of records for provisional testing.
-        if(_observationRecords.size() >= 100)
-            break;
+//        if(_observationRecords.size() >= 200)
+//            break;
     }
 
     file.close();
@@ -75,7 +75,9 @@ ObservationData::ObservationData(string filePath)
 
 Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr navigationData, Coordinates::cptr approxRecCoord) const
 {
-    double const ITER_TOL = 10e-8;
+    double const ITER_TOL = 1E-8;
+    double const BLUNDER_PICKER = 0.5E6;
+    double const CUTOFF_ELEVATION = 10.0 / 180 * PI;
 
     Vector3d recCoord = approxRecCoord->toXYZ();
     double recClockError = 0;
@@ -92,7 +94,7 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
         int countDisposed = 0; // Count the number of records with some data lost.
 
         for(int satIndex = 0; satIndex < int(_listSatPRN.size()); ++satIndex)
-            // Observation for each satellite can generates a equation.
+            // Observation for each single satellite generates a equation.
         {
             if(_pseudorange_C1C.at(satIndex) < EPS)
                 // Ignore records with data partly lost.
@@ -102,10 +104,10 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
             }
 
             NavigationRecord::cptr closeRecord = navigationData->findCloseRecord(_receiverTime, _listSatPRN.at(satIndex));
-            if(!closeRecord)
+            if(closeRecord == nullptr)
                 return nullptr; // No corresponding empheris found.
 
-            double recTimeF = WeekSecond(_receiverTime)._remainingSecond;
+            double recTimeF = GpsWeekSecond(_receiverTime)._second;
             double estimatedTimeDelay = 0.075;
 
             MatrixXd rotationCorrection(3, 3);
@@ -124,14 +126,15 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
                 satCoord = closeRecord->computeSatellitePosition(&satTimeF)->toXYZ();
                 satCoord = rotationCorrection * satCoord;
 
-                if(abs(satTimeF - satTimePrev) <= ITER_TOL)
+                if(fabs(satTimeF - satTimePrev) <= ITER_TOL)
                     break;
 
                 estimatedTimeDelay = (satCoord - recCoord).norm() / Reference::c;
             }
 
-            double satElevation = asin(satCoord[2] / satCoord.norm());
-            if(satElevation <= 15.0 / 180 * PI)
+            Vector3d satCoordNEU = Coordinates(satCoord).toNEU(*approxRecCoord);
+            double satElevation = asin(satCoordNEU[2] / satCoordNEU.norm());
+            if(satElevation <= CUTOFF_ELEVATION)
                 // Ignore records of low elevation.
             {
                 ++countDisposed;
@@ -139,11 +142,19 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
             }
 
             double rho = (recCoord - satCoord).norm();
+            if(fabs(rho - _pseudorange_C1C.at(satIndex)) > BLUNDER_PICKER)
+                // Ignore records with probable blunders.
+            {
+                ++countDisposed;
+                continue;
+            }
+
             double aX = (recCoord[0] - satCoord[0]) / rho;
             double aY = (recCoord[1] - satCoord[1]) / rho;
             double aZ = (recCoord[2] - satCoord[2]) / rho;
 
-            double satClockError = closeRecord->_a0 + closeRecord->_a1 * (recTimeF - satTimeF) + closeRecord->_a2 * pow((recTimeF - satTimeF), 2);
+            double closeTocF = GpsWeekSecond(closeRecord->_Toc)._second;
+            double satClockError = closeRecord->_a0 + closeRecord->_a1 * (satTimeF - closeTocF) + closeRecord->_a2 * pow((satTimeF - closeTocF), 2);
 
             designMat.row(satIndex - countDisposed) << aX, aY, aZ, 1;
             observableVec[satIndex - countDisposed] = _pseudorange_C1C.at(satIndex) - rho + Reference::c * satClockError;

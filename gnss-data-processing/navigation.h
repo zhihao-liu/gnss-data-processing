@@ -38,14 +38,14 @@ public:
     Coordinates::ptr computeSatellitePosition(double const* ti = nullptr) const;
 };
 
-class WeekSecond
+class GpsWeekSecond
 {
 public:
-    typedef shared_ptr<WeekSecond> ptr;
+    typedef shared_ptr<GpsWeekSecond> ptr;
 
-    double _completeWeek, _remainingSecond;
+    double _week, _second;
 
-    WeekSecond(DateTime::cptr dt);
+    GpsWeekSecond(DateTime::cptr dt);
 };
 
 class NavigationData

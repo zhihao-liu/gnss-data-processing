@@ -40,7 +40,7 @@ public:
     DateTime() {}
     DateTime(int year, int month, int day, int hour, int minute, int second);
     DateTime operator- (DateTime const& dt) const;
-    int timeSpanAsSeconds() const;
+    int timeSpanAsSecondsInSingleDay() const;
     bool isCloseTo(DateTime::cptr dt) const;
 };
 

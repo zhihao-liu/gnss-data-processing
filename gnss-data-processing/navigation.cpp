@@ -4,7 +4,7 @@
 #include "navigation.h"
 
 
-WeekSecond::WeekSecond(DateTime::cptr dt)
+GpsWeekSecond::GpsWeekSecond(DateTime::cptr dt)
 {
     int year = dt->_year;
     int month = dt->_month;
@@ -12,6 +12,7 @@ WeekSecond::WeekSecond(DateTime::cptr dt)
     int hour = dt->_hour;
     int minute = dt->_minute;
     int second = dt->_second;
+
     if (month <= 2)
     {
         year = year - 1;
@@ -19,8 +20,8 @@ WeekSecond::WeekSecond(DateTime::cptr dt)
     }
 
     double JD = floor(365.25 * year) + floor(30.6001 * (month + 1)) + day + (hour + minute / 60.0 + second / 3600.0) / 24 + 1720981.5;
-    _completeWeek = floor((JD - 2444244.5) / 7);
-    _remainingSecond = (JD - 2444244.5 - 7 * _completeWeek) * 86400;
+    _week = floor((JD - 2444244.5) / 7);
+    _second = round((JD - 2444244.5 - 7 * _week) * 86400);
 }
 
 NavigationData::NavigationData(string filePath)
@@ -162,13 +163,13 @@ Coordinates::ptr NavigationRecord::computeSatellitePosition(double const* ti) co
 // If ti is not specified,
 // the approximate TOC in the NavigationRecord will be used.
 {
-    WeekSecond tocWeekSecond(_Toc);
+    GpsWeekSecond tocWeekSecond(_Toc);
 
     if(!ti)
-        ti = &tocWeekSecond._remainingSecond;
+        ti = &tocWeekSecond._second;
 
     double tk = *ti - _Toe;
-    if (abs(tk) > 7200)
+    if (fabs(tk) > 7200)
         return nullptr;
 
     double A = pow(_sqrtA, 2);
@@ -179,7 +180,7 @@ Coordinates::ptr NavigationRecord::computeSatellitePosition(double const* ti) co
     //Iterative calculation for eccentric anomaly
     double Ek1 = Mk;
     double Ek0 = 0.0;
-    while (abs(Ek1 - Ek0) > 1.0E-12)
+    while (fabs(Ek1 - Ek0) > 1.0E-12)
     {
         Ek0 = Ek1;
         Ek1 = Mk + _e * sin(Ek0);
@@ -215,8 +216,8 @@ Coordinates::ptr NavigationRecord::computeSatellitePosition(double const* ti) co
 NavigationRecord::cptr NavigationData::findCloseRecord(DateTime::cptr dt, string satPRN) const
 {
     for(int i = 0; i < int(_navigationRecords.size()); ++i)
-        if(satPRN == _navigationRecords.at(i)->_satPRN &&
-                dt->isCloseTo(_navigationRecords.at(i)->_Toc))
+        if(satPRN == _navigationRecords.at(i)->_satPRN && dt->isCloseTo(_navigationRecords.at(i)->_Toc))
             return _navigationRecords.at(i);
+
     return nullptr;
 }

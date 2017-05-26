@@ -9,7 +9,7 @@ DateTime DateTime::operator- (DateTime const &dt) const
     return DateTime(_year - dt._year, _month - dt._month, _day - dt._day, _hour - dt._hour, _minute - dt._minute, _second - dt._second);
 }
 
-int DateTime::timeSpanAsSeconds() const
+int DateTime::timeSpanAsSecondsInSingleDay() const
 {
     if (_year || _month || _day)
         return -1;
@@ -19,7 +19,7 @@ int DateTime::timeSpanAsSeconds() const
 
 bool DateTime::isCloseTo (DateTime::cptr dt) const
 {
-    int timeSpan = (*this - *dt).timeSpanAsSeconds();
+    int timeSpan = (*this - *dt).timeSpanAsSecondsInSingleDay();
     if (timeSpan > 0 && timeSpan <= 7200)
         return true;
     else
@@ -56,7 +56,7 @@ Vector3d Coordinates::toBLH() const
         double BPrev = B;
         B = atan((_Z + getN(B) * pow(Reference::e, 2) * sin(B)) / normXY);
 
-        if (abs(B - BPrev) < ITER_TOL)
+        if (fabs(B - BPrev) < ITER_TOL)
             break;
     }
 

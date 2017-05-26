@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include "navigation.h"
 #include "observation.h"
@@ -16,19 +17,22 @@ int main(int argc, char *argv[])
                                  ("/users/liuzhihao/workstation/programs/gnss-data-processing/sample data/brdm1980.16p"));
     ObservationData::ptr hcad1980(new ObservationData
                                   ("/users/liuzhihao/workstation/programs/gnss-data-processing/sample data/hcad1980.16o"));
+    ofstream fout("/users/liuzhihao/desktop/results.csv");
 
     vector<Coordinates::ptr> results;
     vector<shared_ptr<Vector3d>> errorsInXYZ, errorsInNEU;
     Coordinates preciseValue(-2823793.9960, 4656028.3870, 3309791.2420);
-    for (int i = 0; i < int(hcad1980->_observationRecords.size()); ++i)
+    for (long i = 0; i < long(hcad1980->_observationRecords.size()); ++i)
     {
-        Coordinates::ptr coord = hcad1980->_observationRecords.at(i)->
-                computeReceiverPosition(brdm1980, hcad1980->_header->approxPosition);
+        Coordinates::ptr coord = hcad1980->_observationRecords.at(i)->computeReceiverPosition(brdm1980, hcad1980->_header->approxPosition);
         results.push_back(coord);
         if(coord != nullptr)
         {
-            errorsInXYZ.push_back(shared_ptr<Vector3d>(new Vector3d(coord->errorInXYZ(preciseValue))));
-            errorsInNEU.push_back(shared_ptr<Vector3d>(new Vector3d(coord->errorInNEU(preciseValue))));
+            fout << coord->_X << "," << coord->_Y << "," << coord->_Z <<  ",";
+            errorsInXYZ.push_back(shared_ptr<Vector3d>(new Vector3d(coord->errorInXYZ(preciseValue))));            
+            fout << (*errorsInXYZ.back())[0] << "," << (*errorsInXYZ.back())[1] << "," << (*errorsInXYZ.back())[2] << ",";
+            errorsInNEU.push_back(shared_ptr<Vector3d>(new Vector3d(coord->errorInNEU(preciseValue))));            
+            fout << (*errorsInNEU.back())[0] << "," << (*errorsInNEU.back())[1] << "," << (*errorsInNEU.back())[2] << endl;
         }
         else
         {
@@ -36,6 +40,8 @@ int main(int argc, char *argv[])
             errorsInNEU.push_back(nullptr);
         }
     }
+
+    cout << "OUTPUT FINISHED" << endl;
 
     getchar();
 
