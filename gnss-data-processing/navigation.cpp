@@ -4,14 +4,14 @@
 #include "navigation.h"
 
 
-GpsWeekSecond::GpsWeekSecond(DateTime::cptr dt)
+GpsWeekSecond::GpsWeekSecond(DateTime const& dt)
 {
-    int year = dt->_year;
-    int month = dt->_month;
-    int day = dt->_day;
-    int hour = dt->_hour;
-    int minute = dt->_minute;
-    int second = dt->_second;
+    int year = dt._year;
+    int month = dt._month;
+    int day = dt._day;
+    int hour = dt._hour;
+    int minute = dt._minute;
+    int second = dt._second;
 
     if (month <= 2)
     {
@@ -24,8 +24,7 @@ GpsWeekSecond::GpsWeekSecond(DateTime::cptr dt)
     _second = round((JD - 2444244.5 - 7 * _week) * 86400);
 }
 
-NavigationData::NavigationData(string filePath)
-    :_header(new NavigationHeader())
+NavigationData::NavigationData(string const& filePath)
 {
     string rinexType = filePath.substr(filePath.length() - 1, 1);
     if (rinexType != "p" && rinexType != "P")
@@ -39,13 +38,13 @@ NavigationData::NavigationData(string filePath)
     while (!file.eof())
     {
         getline(file, line);
-        _header->_infoLines.push_back(line);
+        _header._infoLines.push_back(line);
         if (line.substr(60, 13) == "END OF HEADER")
             break;
     }
 
-    NavigationRecord::ptr lastRecord;
-    NavigationRecord::ptr record;
+    shared_ptr<NavigationRecord> lastRecord;
+    shared_ptr<NavigationRecord> record;
     while (!file.eof())
     {
         getline(file, line);
@@ -77,7 +76,7 @@ NavigationData::NavigationData(string filePath)
             int hour = atoi(line.substr(14, 3).c_str());
             int minute = atoi(line.substr(17, 3).c_str());
             int second = atoi(line.substr(20, 3).c_str());
-            record->_Toc.reset(new DateTime(year, month, day, hour, minute, second));
+            record->_Toc = DateTime(year, month, day, hour, minute, second);
 
             record->_a0 = atof(line.substr(23, 19).c_str());
             record->_a1 = atof(line.substr(42, 19).c_str());
@@ -125,7 +124,7 @@ NavigationData::NavigationData(string filePath)
 
             // Ignore more than one records of the same satellite within 2 hours.
             if (lastRecord)
-                if (record->_satPRN == lastRecord->_satPRN && record->_Toc->isCloseTo(lastRecord->_Toc))
+                if (record->_satPRN == lastRecord->_satPRN && record->_Toc.isCloseTo(lastRecord->_Toc))
                     continue;
 
             _navigationRecords.push_back(record);
@@ -156,7 +155,7 @@ NavigationData::NavigationData(string filePath)
     file.close();
 }
 
-Coordinates::ptr NavigationRecord::computeSatellitePosition(double const* ti) const
+Coordinates NavigationRecord::computeSatellitePosition(double const* ti) const
 // Calculate the SatellitePosition
 // using internal parameters of the NavigationRecord
 // and the specified ti.
@@ -165,12 +164,13 @@ Coordinates::ptr NavigationRecord::computeSatellitePosition(double const* ti) co
 {
     GpsWeekSecond tocWeekSecond(_Toc);
 
-    if(!ti)
+    if(ti == nullptr)
         ti = &tocWeekSecond._second;
 
     double tk = *ti - _Toe;
-    if (fabs(tk) > 7200)
-        return nullptr;
+
+//    if (fabs(tk) > 7200)
+//        return nullptr;
 
     double A = pow(_sqrtA, 2);
     double n0 = pow(Reference::mu / pow(A, 3), 0.5);
@@ -210,14 +210,14 @@ Coordinates::ptr NavigationRecord::computeSatellitePosition(double const* ti) co
     double Yi = ri * (cos(ui) * sin(lambda) + sin(ui) * cos(ii) * cos(lambda));
     double Zi = ri * (sin(ui) * sin(ii));
 
-    return Coordinates::ptr(new Coordinates(Xi, Yi, Zi));
+    return Coordinates(Xi, Yi, Zi);
 }
 
-NavigationRecord::cptr NavigationData::findCloseRecord(DateTime::cptr dt, string satPRN) const
+shared_ptr<NavigationRecord> NavigationData::findCloseRecord(DateTime const& dt, string const& satPRN) const
 {
-    for(int i = 0; i < int(_navigationRecords.size()); ++i)
-        if(satPRN == _navigationRecords.at(i)->_satPRN && dt->isCloseTo(_navigationRecords.at(i)->_Toc))
-            return _navigationRecords.at(i);
+    for(auto item : _navigationRecords)
+        if(satPRN == item->_satPRN && dt.isCloseTo(item->_Toc))
+            return item;
 
     return nullptr;
 }

@@ -1,5 +1,7 @@
 #pragma once
 #include <memory>
+#include <string>
+#include <vector>
 #include "../Eigen/Dense" // External libs for matrix manipulation
 
 using namespace std;
@@ -32,35 +34,32 @@ enum SatType
 class DateTime
 {
 public:
-    typedef shared_ptr<DateTime> ptr;
-    typedef shared_ptr<DateTime const> cptr;
-
     int _year, _month, _day, _hour, _minute, _second;
 
-    DateTime() {}
+    ~DateTime() = default;
+    DateTime() = default;
     DateTime(int year, int month, int day, int hour, int minute, int second);
     DateTime operator- (DateTime const& dt) const;
     int timeSpanAsSecondsInSingleDay() const;
-    bool isCloseTo(DateTime::cptr dt) const;
+    bool isCloseTo(DateTime const& dt) const;
 };
 
 class Coordinates
 {
 public:
-    typedef shared_ptr<Coordinates> ptr;
-    typedef shared_ptr<Coordinates const> cptr;
-
     double _X, _Y, _Z;
 
-    Coordinates() {}
+    ~Coordinates() = default;
+    Coordinates() = default;
     Coordinates(double X, double Y, double Z);
     Coordinates(Vector3d const& vec);
 
     Vector3d toXYZ() const;
     Vector3d toBLH() const;
     Vector3d toNEU(Coordinates const& originCoord) const;
-    static MatrixXd transThsToTes(double B, double L);
-    static double getN(double B);
     Vector3d errorInXYZ(Coordinates const& preciseValue) const;
     Vector3d errorInNEU(Coordinates const& preciseValue) const;
+
+    static MatrixXd rotationXyzToNeu(double B, double L);
+    static double getN(double B);
 };

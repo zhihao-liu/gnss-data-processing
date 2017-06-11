@@ -17,9 +17,9 @@ int DateTime::timeSpanAsSecondsInSingleDay() const
         return fabs(_hour * 3600 + _minute * 60 + _second);
 }
 
-bool DateTime::isCloseTo (DateTime::cptr dt) const
+bool DateTime::isCloseTo(DateTime const& dt) const
 {
-    int timeSpan = (*this - *dt).timeSpanAsSecondsInSingleDay();
+    int timeSpan = (*this - dt).timeSpanAsSecondsInSingleDay();
     if (timeSpan > 0 && timeSpan <= 7200)
         return true;
     else
@@ -73,27 +73,23 @@ double Coordinates::getN(double B)
 Vector3d Coordinates::toNEU(Coordinates const& stationCoord) const
 {
     Vector3d BLH = stationCoord.toBLH();
-    double B0 = BLH[0], L0 = BLH[1], H0 = BLH[2];
-    double N0 = getN(B0);
+    double B0 = BLH[0], L0 = BLH[1];
 
-    double dX = (N0 + H0) * cos(B0) * cos(L0);
-    double dY = (N0 + H0) * cos(B0) * sin(L0);
-    double dZ = (N0 * (1 - pow(Reference::e, 2)) + H0) * sin(B0);
+    double dX = _X - stationCoord._X;
+    double dY = _Y - stationCoord._Y;
+    double dZ = _Z - stationCoord._Z;
 
-    return transThsToTes(B0, L0).transpose() * (toXYZ() - Vector3d(dX, dY, dZ));
+    return rotationXyzToNeu(B0, L0) * Vector3d(dX, dY, dZ);
 }
 
-MatrixXd Coordinates::transThsToTes(double B, double L)
+MatrixXd Coordinates::rotationXyzToNeu(double B, double L)
 {
-    double epsY = PI / 2 - B;
-    double epsZ = PI - L;
+    Matrix3d transMat;
+    transMat << -sin(B) * cos(L), -sin(B) * sin(L), cos(B),
+            -sin(L), cos(L), 0,
+            cos(B) * cos(L), cos(B) * sin(L), sin(B);
 
-    MatrixXd Rz(3, 3), Ry(3, 3), Py(3, 3);
-    Py << 1, 0, 0, 0, -1, 0, 0, 0, 1;
-    Ry << cos(epsY), 0, -sin(epsY), 0, 1, 0, sin(epsY), 0, cos(epsY);
-    Rz << cos(epsZ), -sin(epsZ), 0, sin(epsZ), cos(epsZ), 0, 0, 0, 1;
-
-    return Rz * Ry * Py;
+    return transMat;
 }
 
 Vector3d Coordinates::errorInXYZ(Coordinates const& preciseValue) const
@@ -110,5 +106,5 @@ Vector3d Coordinates::errorInNEU(Coordinates const& preciseValue) const
     Vector3d BLH = preciseValue.toBLH();
     double B0 = BLH[0], L0 = BLH[1];
 
-    return transThsToTes(B0, L0).transpose() * errorInXYZ(preciseValue);
+    return rotationXyzToNeu(B0, L0) * errorInXYZ(preciseValue);
 }

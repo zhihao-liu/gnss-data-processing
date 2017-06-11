@@ -3,8 +3,7 @@
 
 #include "observation.h"
 
-ObservationData::ObservationData(string filePath)
-    :_header(new ObservationHeader())
+ObservationData::ObservationData(string const& filePath)
 {
     string rinexType = filePath.substr(filePath.length() - 1, 1);
     if (rinexType != "o" && rinexType != "O")
@@ -18,7 +17,7 @@ ObservationData::ObservationData(string filePath)
     while (!file.eof())
     {
         getline(file, line);
-        _header->_infoLines.push_back(line);
+        _header._infoLines.push_back(line);
         if (line.substr(60, 13) == "END OF HEADER")
             break;
         if (line.substr(60, 19) == "APPROX POSITION XYZ")
@@ -27,11 +26,11 @@ ObservationData::ObservationData(string filePath)
             x = atof(line.substr(1, 13).c_str());
             y = atof(line.substr(15, 13).c_str());
             z = atof(line.substr(29, 13).c_str());
-            _header->approxPosition.reset(new Coordinates(x, y, z));
+            _header._approxPosition = Coordinates(x, y, z);
         }
     }
 
-    ObservationRecord::ptr record;
+    shared_ptr<ObservationRecord> record;
     while (!file.eof())
     {
         getline(file, line);
@@ -46,7 +45,7 @@ ObservationData::ObservationData(string filePath)
         int hour = atoi(line.substr(12, 3).c_str());
         int minute = atoi(line.substr(15, 3).c_str());
         int second = atoi(line.substr(18, 11).c_str());
-        record->_receiverTime.reset(new DateTime(year, month, day, hour, minute, second));
+        record->_receiverTime = DateTime(year, month, day, hour, minute, second);
         record->_statusFlag = atoi(line.substr(29, 3).c_str());
         record->_sumSat = atoi(line.substr(32, 3).c_str());
 
@@ -66,20 +65,20 @@ ObservationData::ObservationData(string filePath)
         _observationRecords.push_back(record);
 
         // Reduce the number of records for provisional testing.
-//        if(_observationRecords.size() >= 200)
+//        if(_observationRecords.size() >= 10000)
 //            break;
     }
 
     file.close();
 }
 
-Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr navigationData, Coordinates::cptr approxRecCoord) const
+shared_ptr<Coordinates> ObservationRecord::computeReceiverPosition(NavigationData const& navigationData, Coordinates const& approxRecCoord) const
 {
     double const ITER_TOL = 1E-8;
     double const BLUNDER_PICKER = 0.5E6;
     double const CUTOFF_ELEVATION = 10.0 / 180 * PI;
 
-    Vector3d recCoord = approxRecCoord->toXYZ();
+    Vector3d recCoord = approxRecCoord.toXYZ();
     double recClockError = 0;
 
     for (int itrAdjust = 0; itrAdjust <= 100; ++itrAdjust)
@@ -103,7 +102,7 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
                 continue;
             }
 
-            NavigationRecord::cptr closeRecord = navigationData->findCloseRecord(_receiverTime, _listSatPRN.at(satIndex));
+            shared_ptr<NavigationRecord> closeRecord = navigationData.findCloseRecord(_receiverTime, _listSatPRN.at(satIndex));
             if(closeRecord == nullptr)
                 return nullptr; // No corresponding empheris found.
 
@@ -123,7 +122,7 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
 
                 double satTimePrev = satTimeF;
                 satTimeF = recTimeF - recClockError - estimatedTimeDelay;
-                satCoord = closeRecord->computeSatellitePosition(&satTimeF)->toXYZ();
+                satCoord = closeRecord->computeSatellitePosition(&satTimeF).toXYZ();
                 satCoord = rotationCorrection * satCoord;
 
                 if(fabs(satTimeF - satTimePrev) <= ITER_TOL)
@@ -132,7 +131,7 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
                 estimatedTimeDelay = (satCoord - recCoord).norm() / Reference::c;
             }
 
-            Vector3d satCoordNEU = Coordinates(satCoord).toNEU(*approxRecCoord);
+            Vector3d satCoordNEU = Coordinates(satCoord).toNEU(approxRecCoord);
             double satElevation = asin(satCoordNEU[2] / satCoordNEU.norm());
             if(satElevation <= CUTOFF_ELEVATION)
                 // Ignore records of low elevation.
@@ -187,5 +186,5 @@ Coordinates::ptr ObservationRecord::computeReceiverPosition(NavigationData::cptr
             break;
     }
 
-    return Coordinates::ptr(new Coordinates(recCoord));
+    return shared_ptr<Coordinates>(new Coordinates(recCoord));
 }
