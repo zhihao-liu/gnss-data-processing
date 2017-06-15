@@ -48,7 +48,7 @@ class NavigationData
 {
 public:
     NavigationHeader _header;
-    vector< shared_ptr<NavigationRecord> > _navigationRecords;
+    vector< shared_ptr<NavigationRecord> > _records;
 
     ~NavigationData() = default;
     NavigationData() = default;

@@ -10,25 +10,40 @@ using namespace Eigen;
 #define PI 3.14159265358979
 #define EPS 1e-8
 
-namespace Reference
+namespace PhysicalConstants
 {
+double const c = 299792458;
+
 double const mu = 3.9860050E14;
 double const omegaE = 7.2921151467E-5;
 
 double const a = 6378137.0;
 double const f = 1 / 298.257223563;
-double const e = sqrt(2 * Reference::f - pow(Reference::f, 2));
+double const e = sqrt(2 * f - pow(f, 2));
+}
 
-double const c = 299792458;
+namespace SatlliteProperties
+{
+double const frequencyGpsL1 = 1575.42;
+double const frequencyGpsL2 = 1227.60;
+}
+
+enum class SatType
+{
+    Unknown = 0,
+    Gps,
+    Bds,
+    Galileo,
+    Sbas
 };
 
-enum SatType
+enum class ObservableType
 {
-    UNKNOWN = 0,
-    SAT_G,
-    SAT_C,
-    SAT_E,
-    SAT_S
+    Unknown = 0,
+    GpsL1,
+    GpsL2,
+    GpsIfCombination, // IF combination of GPS-L1 and GPS-L2.
+    GpsWlCombination // WL combination of GPS-L1 and GPS-L2.
 };
 
 class DateTime
@@ -62,4 +77,28 @@ public:
 
     static MatrixXd rotationXyzToNeu(double B, double L);
     static double getN(double B);
+};
+
+class StringConverter
+{
+public:
+    static string replaceDWithE(string& str)
+    {
+        auto pos = str.find("D");
+        if (pos == string::npos)
+            return str;
+        else
+            return str.replace(str.find("D"), 1, "E");
+    }
+
+    static double toDouble(string& str)
+    {
+        str = replaceDWithE(str);
+        return atof(str.c_str());
+    }
+
+    static int toInt(string& str)
+    {
+        return atoi(str.c_str());
+    }
 };

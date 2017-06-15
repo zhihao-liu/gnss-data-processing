@@ -14,7 +14,7 @@ int DateTime::timeSpanAsSecondsInSingleDay() const
     if (_year || _month || _day)
         return -1;
     else
-        return fabs(_hour * 3600 + _minute * 60 + _second);
+        return int(fabs(_hour * 3600 + _minute * 60 + _second));
 }
 
 bool DateTime::isCloseTo(DateTime const& dt) const
@@ -48,13 +48,13 @@ Vector3d Coordinates::toBLH() const
     double B = atan(_Z / normXY);
 
     double const ITER_TOL = 1E-8;
-    for(int i = 0; i <= 50; ++i)
+    for (int i = 0; i <= 50; ++i)
     {
-        if(i >= 50)
+        if (i >= 50)
             return Vector3d(NAN, NAN, NAN); // Iteration convergence fails.
 
         double BPrev = B;
-        B = atan((_Z + getN(B) * pow(Reference::e, 2) * sin(B)) / normXY);
+        B = atan((_Z + getN(B) * pow(PhysicalConstants::e, 2) * sin(B)) / normXY);
 
         if (fabs(B - BPrev) < ITER_TOL)
             break;
@@ -67,7 +67,7 @@ Vector3d Coordinates::toBLH() const
 
 double Coordinates::getN(double B)
 {
-    return Reference::a / sqrt(1 - pow(Reference::e * sin(B), 2));
+    return PhysicalConstants::a / sqrt(1 - pow(PhysicalConstants::e * sin(B), 2));
 }
 
 Vector3d Coordinates::toNEU(Coordinates const& stationCoord) const

@@ -30,14 +30,17 @@ public:
 
     ~ObservationRecord() = default;
     ObservationRecord() = default;
-    shared_ptr<Coordinates> computeReceiverPosition(NavigationData const& navigationData, Coordinates const& approxRecCoord) const;
+    double getObservable(ObservableType observableType, int index) const;
+    shared_ptr<Coordinates> computeReceiverPosition(NavigationData const& navigationData,
+                                                    Coordinates const& approxRecCoord,
+                                                    ObservableType observableType) const;
 };
 
 class ObservationData
 {
 public:
     ObservationHeader _header;
-    vector< shared_ptr<ObservationRecord> > _observationRecords;
+    vector< shared_ptr<ObservationRecord> > _records;
 
     ~ObservationData() = default;
     ObservationData() = default;

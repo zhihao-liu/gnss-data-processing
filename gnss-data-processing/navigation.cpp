@@ -27,10 +27,11 @@ GpsWeekSecond::GpsWeekSecond(DateTime const& dt)
 NavigationData::NavigationData(string const& filePath)
 {
     string rinexType = filePath.substr(filePath.length() - 1, 1);
-    if (rinexType != "p" && rinexType != "P")
+    if (rinexType != "p" && rinexType != "P" &&
+            rinexType != "n" && rinexType != "N")
         return;
 
-    ifstream file(filePath.c_str());
+    ifstream file(filePath);
     if (!file) return;
 
     string line;
@@ -56,91 +57,91 @@ NavigationData::NavigationData(string const& filePath)
         record->_satPRN = line.substr(0, 3);
 
         string typeMark = record->_satPRN.substr(0, 1);
-        SatType satType = UNKNOWN;
+        SatType satType = SatType::Unknown;
         if (typeMark == "G")
-            satType = SAT_G;
+            satType = SatType::Gps;
         else if (typeMark == "C")
-            satType = SAT_C;
+            satType = SatType::Bds;
         else if (typeMark == "E")
-            satType = SAT_E;
+            satType = SatType::Galileo;
         else if (typeMark == "S")
-            satType = SAT_S;
+            satType = SatType::Sbas;
 
         switch (satType)
         {
-        case SAT_G:
+        case SatType::Gps:
         {
-            int year = atoi(line.substr(3, 5).c_str());
-            int month = atoi(line.substr(8, 3).c_str());
-            int day = atoi(line.substr(11, 3).c_str());
-            int hour = atoi(line.substr(14, 3).c_str());
-            int minute = atoi(line.substr(17, 3).c_str());
-            int second = atoi(line.substr(20, 3).c_str());
+            int year = StringConverter::toInt(line.substr(3, 5));
+            int month = StringConverter::toInt(line.substr(8, 3));
+            int day = StringConverter::toInt(line.substr(11, 3));
+            int hour = StringConverter::toInt(line.substr(14, 3));
+            int minute = StringConverter::toInt(line.substr(17, 3));
+            int second = StringConverter::toInt(line.substr(20, 3));
             record->_Toc = DateTime(year, month, day, hour, minute, second);
 
-            record->_a0 = atof(line.substr(23, 19).c_str());
-            record->_a1 = atof(line.substr(42, 19).c_str());
-            record->_a2 = atof(line.substr(61, 19).c_str());
+            record->_a0 = StringConverter::toDouble(line.substr(23, 19));
+            record->_a1 = StringConverter::toDouble(line.substr(42, 19));
+            record->_a2 = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_IODE = atof(line.substr(4, 19).c_str());
-            record->_Crs = atof(line.substr(23, 19).c_str());
-            record->_DeltaN = atof(line.substr(42, 19).c_str());
-            record->_M0 = atof(line.substr(61, 19).c_str());
+            record->_IODE = StringConverter::toDouble(line.substr(4, 19));
+            record->_Crs = StringConverter::toDouble(line.substr(23, 19));
+            record->_DeltaN = StringConverter::toDouble(line.substr(42, 19));
+            record->_M0 = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_Cuc = atof(line.substr(4, 19).c_str());
-            record->_e = atof(line.substr(23, 19).c_str());
-            record->_Cus = atof(line.substr(42, 19).c_str());
-            record->_sqrtA = atof(line.substr(61, 19).c_str());
+            record->_Cuc = StringConverter::toDouble(line.substr(4, 19));
+            record->_e = StringConverter::toDouble(line.substr(23, 19));
+            record->_Cus = StringConverter::toDouble(line.substr(42, 19));
+            record->_sqrtA = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_Toe = atof(line.substr(4, 19).c_str());
-            record->_Cic = atof(line.substr(23, 19).c_str());
-            record->_Omega0 = atof(line.substr(42, 19).c_str());
-            record->_Cis = atof(line.substr(61, 19).c_str());
+            record->_Toe = StringConverter::toDouble(line.substr(4, 19));
+            record->_Cic = StringConverter::toDouble(line.substr(23, 19));
+            record->_Omega0 = StringConverter::toDouble(line.substr(42, 19));
+            record->_Cis = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_I0 = atof(line.substr(4, 19).c_str());
-            record->_Crc = atof(line.substr(23, 19).c_str());
-            record->_omega = atof(line.substr(42, 19).c_str());
-            record->_OmegaDOT = atof(line.substr(61, 19).c_str());
+            record->_I0 = StringConverter::toDouble(line.substr(4, 19));
+            record->_Crc = StringConverter::toDouble(line.substr(23, 19));
+            record->_omega = StringConverter::toDouble(line.substr(42, 19));
+            record->_OmegaDOT = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_IDOT = atof(line.substr(4, 19).c_str());
-            record->_CodesL2Channel = atof(line.substr(23, 19).c_str());
-            record->_GpsWeek = atof(line.substr(42, 19).c_str());
-            record->_L2DataFlag = atof(line.substr(61, 19).c_str());
+            record->_IDOT = StringConverter::toDouble(line.substr(4, 19));
+            record->_CodesL2Channel = StringConverter::toDouble(line.substr(23, 19));
+            record->_GpsWeek = StringConverter::toDouble(line.substr(42, 19));
+            record->_L2DataFlag = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_SvAccuracy = atof(line.substr(4, 19).c_str());
-            record->_SvHealth = atof(line.substr(23, 19).c_str());
-            record->_Tgd = atof(line.substr(42, 19).c_str());
-            record->_IODC = atof(line.substr(61, 19).c_str());
+            record->_SvAccuracy = StringConverter::toDouble(line.substr(4, 19));
+            record->_SvHealth = StringConverter::toDouble(line.substr(23, 19));
+            record->_Tgd = StringConverter::toDouble(line.substr(42, 19));
+            record->_IODC = StringConverter::toDouble(line.substr(61, 19));
 
             getline(file, line);
-            record->_TransmissionTime = atof(line.substr(4, 19).c_str());
-            record->_FitInterval = atof(line.substr(23, 19).c_str());
+            record->_TransmissionTime = StringConverter::toDouble(line.substr(4, 19));
+            record->_FitInterval = StringConverter::toDouble(line.substr(23, 19));
 
             // Ignore more than one records of the same satellite within 2 hours.
             if (lastRecord)
                 if (record->_satPRN == lastRecord->_satPRN && record->_Toc.isCloseTo(lastRecord->_Toc))
                     continue;
 
-            _navigationRecords.push_back(record);
+            _records.push_back(record);
             lastRecord = record;
         }
             break;
 
-        case SAT_C:
-        case SAT_E:
+        case SatType::Bds:
+        case SatType::Galileo:
         {
             for (int i = 0; i < 8; ++i)
                 getline(file, line);
         }
             break;
 
-        case SAT_S:
+        case SatType::Sbas:
         {
             for (int i = 0; i < 4; ++i)
                 getline(file, line);
@@ -164,7 +165,7 @@ Coordinates NavigationRecord::computeSatellitePosition(double const* ti) const
 {
     GpsWeekSecond tocWeekSecond(_Toc);
 
-    if(ti == nullptr)
+    if (ti == nullptr)
         ti = &tocWeekSecond._second;
 
     double tk = *ti - _Toe;
@@ -173,7 +174,7 @@ Coordinates NavigationRecord::computeSatellitePosition(double const* ti) const
 //        return nullptr;
 
     double A = pow(_sqrtA, 2);
-    double n0 = pow(Reference::mu / pow(A, 3), 0.5);
+    double n0 = pow(PhysicalConstants::mu / pow(A, 3), 0.5);
     double ni = n0 + _DeltaN;
     double Mk = _M0 + ni * tk;
 
@@ -204,7 +205,7 @@ Coordinates NavigationRecord::computeSatellitePosition(double const* ti) const
     double ri = A * (1 - _e * cos(Ek)) + delta_rk;
     double ii = _I0 + delta_ik;
 
-    double lambda = _Omega0 + (_OmegaDOT - Reference::omegaE) * tk - Reference::omegaE * _Toe;
+    double lambda = _Omega0 + (_OmegaDOT - PhysicalConstants::omegaE) * tk - PhysicalConstants::omegaE * _Toe;
 
     double Xi = ri * (cos(ui) * cos(lambda) - sin(ui) * cos(ii) * sin(lambda));
     double Yi = ri * (cos(ui) * sin(lambda) + sin(ui) * cos(ii) * cos(lambda));
@@ -215,8 +216,8 @@ Coordinates NavigationRecord::computeSatellitePosition(double const* ti) const
 
 shared_ptr<NavigationRecord> NavigationData::findCloseRecord(DateTime const& dt, string const& satPRN) const
 {
-    for(auto item : _navigationRecords)
-        if(satPRN == item->_satPRN && dt.isCloseTo(item->_Toc))
+    for (auto item : _records)
+        if (satPRN == item->_satPRN && dt.isCloseTo(item->_Toc))
             return item;
 
     return nullptr;
